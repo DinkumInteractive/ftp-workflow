@@ -1,0 +1,75 @@
+name: CI Flywheel
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the main branch
+on:
+  workflow_call:
+    secrets:
+      SFTP_CUSTOMER:
+        required: true
+      SFTP_USERNAME:
+        required: true
+      SFTP_PASSWORD:
+        required: true
+      SFTP_STAGING_SITE:
+        required: false
+      SFTP_STAGING_THEME:
+        required: false
+      SFTP_SITE:
+        required: false
+      SFTP_THEME:
+        required: false
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "deploy"
+  deploy:
+    if: ( contains(github.event.head_commit.message, 'deploy:staging') && github.ref == 'refs/heads/staging' ) || ( contains(github.event.head_commit.message, 'deploy:production') && ( github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' ) )
+    # The following settings are used to configure the login details and SFTP path for deploying
+    # a `wp-content` directory to sftp://sftp.flywheelsites.com/<site-owner>/<site-name>/wp-content
+
+    # It is recommended to not modify any of the following configuration unless you know what you are doing.
+    # To update your SFTP configuration, update the previous values under the `env` key.
+    name: Deploy
+
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+
+          if [[ "${{github.base_ref}}" == "staging" || "${{github.ref}}" == "refs/heads/staging" ]]; then
+            echo "::set-output name=SFTP_SITE::${{ secrets.SFTP_STAGING_SITE }}"
+            echo "::set-output name=SFTP_THEME::${{ secrets.SFTP_STAGING_THEME }}"
+            echo "Set vars and then deploy to STAGING"
+          fi
+          if [[ "${{github.base_ref}}" == "master" || "${{github.ref}}" == "refs/heads/master" || "${{github.ref}}" == "refs/heads/main" || "${{github.base_ref}}" == "main" ]]; then
+            echo "::set-output name=SFTP_SITE::${{ secrets.SFTP_SITE }}"
+            echo "::set-output name=SFTP_THEME::${{ secrets.SFTP_THEME }}"
+            echo "Set vars and then deploy to PRODUCTION"
+          fi
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Deploys to FTP
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@3.1.1
+        with:
+          # Deployment destination server & path. Formatted as protocol://domain.com:port/full/destination/path/
+          ftp-server: sftp://sftp.flywheelsites.com:22/${{ secrets.SFTP_USERNAME }}/${{ steps.vars.outputs.SFTP_SITE }}/wp-content/themes/${{ steps.vars.outputs.SFTP_THEME }}
+
+          # FTP account username
+          ftp-username: ${{ secrets.SFTP_USERNAME }}
+
+          # FTP account password
+          ftp-password: ${{ secrets.SFTP_PASSWORD }}
+          # The local folder to copy, defaults to root project folder
+          local-dir: ./
+          # This was generated using the output of `ssh-keyscan sftp.flywheelsites.com`
+          known-hosts: |
+            sftp.flywheelsites.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDMIS14tbLPD4QfBAd/0HR49FLqOnnJpFOQ1Oi1h+VJ2FORvREvaXkp7Dmwe2+V4lI2IRj/R5FQYgPeS/rEgo4WC9IGsCNNaKuInzEQXliWVmk83Qjvu7MHLH5f5Mi8rGwbZ15h+gD43hYkIWP2NqCORbqSKceljzoH6IMOk2uFeSciN5W4/UUGjGlCEPnde+PDHo/CpAacqvmNTRy/HjTr5ZVO+OPb1z39UXCSS7yuC5gVQV+fpAR6Qy6SxtDHZmj3oFrV2gnpit4W5n05gRTeN9t4yr7FVGHKyAK368rLnT/rzTKuXj1X0dqtJAgPc4x/1mGmlpGxFJyC81y68Nhb
+            sftp.flywheelsites.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNUE6XSOzuPtV1OvxAWASIsQZVHh1MXcK4O9MXrNMdHotmXgi5k0PsaPnVoSak7HZXi1MrdYr/HUTCp2EeoBJwk=
+            sftp.flywheelsites.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAvUkYak/VVuAvuYxO+8+yyNPf1B9K8qtaWLCfYnCo6p
