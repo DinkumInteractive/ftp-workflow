@@ -24,7 +24,7 @@ on:
 jobs:
   # This workflow contains a single job called "deploy"
   deploy:
-    if: ( contains(github.event.head_commit.message, 'deploy:staging') && github.ref == 'refs/heads/staging' ) || ( contains(github.event.head_commit.message, 'deploy:production') && ( github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' ) )
+    # if: ( contains(github.event.head_commit.message, 'deploy:staging') && github.ref == 'refs/heads/staging' ) || ( contains(github.event.head_commit.message, 'deploy:production') && ( github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' ) )
     # The following settings are used to configure the login details and SFTP path for deploying
     # a `wp-content` directory to sftp://sftp.flywheelsites.com/<site-owner>/<site-name>/wp-content
 
